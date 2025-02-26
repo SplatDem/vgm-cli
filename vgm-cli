@@ -1,0 +1,83 @@
+#!/bin/bash
+# vgm-cli - Utility for listening music from khinsider in your terminal
+# Deps: mpv, curl, grep, sed, fzf/rofi, yt-dlp
+
+BASE_URL="https://downloads.khinsider.com"
+PLAYER="mpv --no-video --quiet"
+USE_EXTERNAL_MENU=0 # 1 - rofi, 0 - fzf
+CACHE_DIR="$HOME/.cache/vgm-cli"
+HISTFILE="$HOME/.config/vgm-cli/history"
+
+init_env() {
+    [ ! -d "$(dirname "$HISTFILE")" ] && mkdir -p "$(dirname "$HISTFILE")"
+    [ ! -d "$CACHE_DIR" ] && mkdir -p "$CACHE_DIR"
+}
+
+search_music() {
+    local query="$1"
+    curl -s "$BASE_URL/search?search=$query" | \
+        grep -oP 'href="/game-soundtracks/album/[^"]+"' | \
+        sed 's|href="|'"$BASE_URL"'|g; s|"||g'
+}
+
+get_track_list() {
+    local album_url="$1"
+    curl -s "$album_url" | \
+        grep -oP 'href="/game-soundtracks/album/[^"]+/[^"]+\.mp3"' | \
+        sed 's|href="|'"$BASE_URL"'|g; s|"||g'
+}
+
+select_track() {
+    local tracks="$1"
+    if [ $USE_EXTERNAL_MENU -eq 1 ]; then
+        echo "$tracks" | rofi -dmenu -i -p "Music: "
+    else
+        echo "$tracks" | fzf --reverse --cycle --prompt "Music: "
+    fi
+}
+
+play_music() {
+    local url="$1"
+    $PLAYER "$url" 2>/dev/null
+    echo "$(date +%s) $url" >> "$HISTFILE"
+}
+
+show_history() {
+    [ ! -f "$HISTFILE" ] && return
+    cat "$HISTFILE" | sort -nr | cut -d' ' -f2- | uniq | head -20
+}
+
+main_menu() {
+    while true; do
+        choice=$(printf "Search\nHistory\nExit" | \
+            if [ $USE_EXTERNAL_MENU -eq 1 ]; then
+                rofi -dmenu -i -p "Menu: "
+            else
+                fzf --reverse --cycle --prompt "Menu: "
+            fi)
+
+        case "$choice" in
+            Search)
+                read -p "Search: " query
+                results=$(search_music "$query")
+                album_url=$(select_track "$results")
+                [ -z "$album_url" ] && continue
+                tracks=$(get_track_list "$album_url")
+                track_url=$(select_track "$tracks")
+                [ -z "$track_url" ] && continue
+                play_music "$track_url"
+                ;;
+            History)
+                hist=$(show_history)
+                track_url=$(select_track "$hist")
+                [ -z "$track_url" ] && continue
+                play_music "$track_url"
+                ;;
+            Exit) exit 0 ;;
+            *) exit 1 ;;
+        esac
+    done
+}
+
+init_env
+main_menu
