@@ -1,6 +1,6 @@
 # vgm-cli
 
-**Video Game Music CLI ** - Utility for listening to music from the site [kninsider](https://downloads.khinsider.com/).
+**Video Game Music CLI** - Utility for listening to music from the site [kninsider](https://downloads.khinsider.com/).
 
 ## Installation
 ```shell
