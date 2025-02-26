@@ -18,4 +18,4 @@ rm -rf vgm-cli
  - fzf
  - rofi ***(Not in use at the moment)***
 
-The program is in a very early stage. Using it now would be an extremely bad decision.
+***The program is in a very early stage. Using it now would be an extremely bad decision.*** (And only .mp3 btw)
